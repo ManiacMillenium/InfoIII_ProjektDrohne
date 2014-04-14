@@ -2,7 +2,10 @@ package mygame;
 
 import com.jme3.app.SimpleApplication;
 import com.jme3.input.KeyInput;
+import com.jme3.input.MouseInput;
+import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
+import com.jme3.input.controls.MouseButtonTrigger;
 import com.jme3.light.AmbientLight;
 import com.jme3.light.DirectionalLight;
 import com.jme3.light.PointLight;
@@ -27,26 +30,108 @@ public class Main extends SimpleApplication {
 
     //Ziel Positionswerte
     float posX, posY, posZ, flughoehe, bodenhoehe, toleranz;
-    boolean xErreicht, zErreicht, zielErreicht;
+    //Status Abfragen
+    boolean xErreicht, zErreicht, zielErreicht, autoWartet;
     Vector3f zielposition;
    
     // Le Drone
     Dome mesh = new Dome(Vector3f.ZERO, 2, 3, .4f,false);
     Geometry drone = new Geometry("Drone", mesh);
-    
-    
+       
     public static void main(String[] args) {
+                
         Main app = new Main();
         app.start();
     }
 
+    public void fliegeZuWP (float xKoord, float zKoord, float hoehe){
+        float wpX = xKoord;
+        float wpZ = zKoord;
+        float height = hoehe;
+        float winkel, ziel;
+        
+        Vector3f pos = drone.getLocalTranslation();
+        
+        winkel = drone.getWorldRotation().getY();
+        //System.out.println("winkel: "+winkel);
+        ziel = drone.getWorldTranslation().angleBetween(pos);
+        //System.out.println("zwischen: "+ziel);
+        
+        if (pos.x < wpX+toleranz && pos.x > wpX-toleranz){
+            xErreicht = true;
+            //System.out.println("X erreicht!");
+        }
+        else{
+            if (xErreicht != false){
+                xErreicht = false; 
+                System.out.println("X_false");
+            }
+        }
+        
+        if (pos.z < wpZ+toleranz && pos.z > wpZ-toleranz){
+            zErreicht = true;
+            //System.out.println("Z erreicht!");
+        }
+        else{
+            if (zErreicht != false){
+                zErreicht = false;
+                System.out.println("Z_false");                
+            }
+        }
+        
+        if (zErreicht && xErreicht && pos.y <= bodenhoehe){
+            zielErreicht = true;
+        }
+        
+        if (!xErreicht | !zErreicht){
+            
+            if(pos.y > height){
+                drone.lookAt(zielposition, Vector3f.UNIT_Y);
+                    
+                if (pos.x < wpX-toleranz){
+                    //System.out.println("X < X: "+pos.x);
+                    drone.move(0.02f, 0, 0);
+                }
+                
+                if (pos.z < posZ-toleranz){
+                    //System.out.println("Z < Z: "+pos.z);
+                    drone.move(0, 0, 0.02f);
+                }
+                
+                if (pos.z > posZ+toleranz){
+                    //System.out.println("Z > Z: "+pos.z);
+                    drone.move(0, 0, -0.02f);
+                }
+                    
+                if (pos.x > wpX+toleranz){
+                    //System.out.println("X > X: "+pos.x);
+                    drone.move(-0.02f, 0, 0);
+                }
+            }
+            else{
+                    if (pos.y < height){
+                        //System.out.println("Flughöhe anpassen...");
+                        drone.move(0, 0.02f, 0);   
+                    }
+            }
+        }
+        if (xErreicht && zErreicht && pos.y > bodenhoehe){
+            drone.move(0, -0.02f, 0);
+            //System.out.println("Lande...");
+        }
+        if (xErreicht && zErreicht && pos.y <=bodenhoehe){
+            //System.out.println("Position erreicht!");
+        }
+    }
+        
     @Override
     public void simpleInitApp() {        
-        
+        //Tastenbelegung laden
+        initKeys();
         //Ziel Position 
-        posX = -4;
+        posX = -2;
         posY = 0.2f;
-        posZ = 4;
+        posZ = 5;
         flughoehe = 2;
         bodenhoehe = 0.3f;
         toleranz = 0.2f;
@@ -54,6 +139,7 @@ public class Main extends SimpleApplication {
         xErreicht = false;
         zErreicht = false;
         zielErreicht = false;
+        autoWartet = false;
         
         zielposition = new Vector3f(posX,posY,posZ);
         System.out.println("Ziel: "+posX+", "+posY+", "+posZ);
@@ -143,83 +229,35 @@ public class Main extends SimpleApplication {
         cam.setLocation(new Vector3f(-5, 10, 0));
         cam.lookAt(Vector3f.ZERO, Vector3f.UNIT_Y);
     }
-        
+    
+        /** Tastenzuweisung. */
+    private void initKeys() {
+        // Drücken der Leertaste zeigt an, dass ein Fahrzeug angekommen ist
+        inputManager.addMapping("Gast",  new KeyTrigger(KeyInput.KEY_SPACE));
+
+        // Hinzufügen des Tastendrucks zum inputManager
+        inputManager.addListener(actionListener, new String[]{"Gast"});
+    }
+    
+    private ActionListener actionListener = new ActionListener() {
+        public void onAction(String name, boolean keyPressed, float tpf) {
+            if (name.equals("Gast") && !keyPressed) {
+                if(!autoWartet){
+                autoWartet = true;
+                System.out.println("Gast Wartet!");
+                }
+            }
+        }
+    };
+    
     @Override
     public void simpleUpdate(float tpf) {
-        
-        Vector3f pos = drone.getLocalTranslation();
-        
-        float winkel, ziel;
-        winkel = drone.getWorldRotation().getY();
-        //System.out.println("winkel: "+winkel);
-        ziel = drone.getWorldTranslation().angleBetween(pos);
-        //System.out.println("zwischen: "+ziel);
-        
-        if (pos.x < posX+toleranz && pos.x > posX-toleranz){
-            xErreicht = true;
-            //System.out.println("X erreicht!");
-        }
-        else{
-            if (xErreicht != false){
-                xErreicht = false; 
-                System.out.println("X_false");
+        fliegeZuWP(posX,posZ,flughoehe);
+                this.actionListener = new ActionListener(){
+            public void onAction(String name, boolean pressed, float tpf){
+                System.out.println(name + " = " + pressed);
             }
-        }
-        
-        if (pos.z < posZ+toleranz && pos.z > posZ-toleranz){
-            zErreicht = true;
-            //System.out.println("Z erreicht!");
-        }
-        else{
-            if (zErreicht != false){
-                zErreicht = false;
-                System.out.println("Z_false");                
-            }
-        }
-        
-        if (zErreicht && xErreicht && pos.y <= bodenhoehe){
-            zielErreicht = true;
-        }
-        
-        if (!xErreicht | !zErreicht){
-            
-            if(pos.y > flughoehe){
-                drone.lookAt(zielposition, Vector3f.UNIT_Y);
-                    
-                if (pos.x < posX-toleranz){
-                    System.out.println("X < X: "+pos.x);
-                    drone.move(0.02f, 0, 0);
-                }
-                
-                if (pos.z < posZ-toleranz){
-                    System.out.println("Z < Z: "+pos.z);
-                    drone.move(0, 0, 0.02f);
-                }
-                
-                if (pos.z > posZ+toleranz){
-                    System.out.println("Z > Z: "+pos.z);
-                    drone.move(0, 0, -0.02f);
-                }
-                    
-                if (pos.x > posX+toleranz){
-                    System.out.println("X > X: "+pos.x);
-                    drone.move(-0.02f, 0, 0);
-                }
-            }
-            else{
-                    if (pos.y < flughoehe){
-                        System.out.println("Flughöhe anpassen...");
-                        drone.move(0, 0.02f, 0);   
-                    }
-            }
-        }
-        if (xErreicht && zErreicht && pos.y > bodenhoehe){
-            drone.move(0, -0.02f, 0);
-            System.out.println("Lande...");
-        }
-        if (xErreicht && zErreicht && pos.y <=bodenhoehe){
-            System.out.println("Position erreicht!");
-        }
+        };
     }
 
     @Override
