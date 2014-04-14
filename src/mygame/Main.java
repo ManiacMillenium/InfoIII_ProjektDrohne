@@ -22,10 +22,6 @@ import com.jme3.scene.shape.Dome;
 import com.jme3.shadow.DirectionalLightShadowFilter;
 import com.jme3.shadow.DirectionalLightShadowRenderer;
 
-/**
- * test
- * @author normenhansen
- */
 public class Main extends SimpleApplication {
 
     //Ziel Positionswerte
@@ -37,6 +33,11 @@ public class Main extends SimpleApplication {
     // Le Drone
     Dome mesh = new Dome(Vector3f.ZERO, 2, 3, .4f,false);
     Geometry drone = new Geometry("Drone", mesh);
+    // Zielposition Anzeige
+    Box zielObj = new Box(Vector3f.ZERO, 0.1f, 0.1f, 0.1f);
+    Geometry target = new Geometry("Box", zielObj);
+    
+    Waypoint wp1, wp2, wp3;
        
     public static void main(String[] args) {
                 
@@ -129,12 +130,17 @@ public class Main extends SimpleApplication {
         //Tastenbelegung laden
         initKeys();
         //Ziel Position 
-        posX = -2;
+        posX = 0;
         posY = 0.2f;
-        posZ = 5;
+        posZ = 0;
         flughoehe = 2;
         bodenhoehe = 0.3f;
         toleranz = 0.2f;
+        
+        //Waypoints einrichten
+        wp1 = new Waypoint(2,4,2);
+        wp2 = new Waypoint(-3,2,2);
+        wp3 = new Waypoint(0,1,2);
         
         xErreicht = false;
         zErreicht = false;
@@ -150,8 +156,6 @@ public class Main extends SimpleApplication {
         geom.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
 
         // Aktuelles Ziel
-        Box zielObj = new Box(Vector3f.ZERO, 0.1f, 0.1f, 0.1f);
-        Geometry target = new Geometry("Box", zielObj);
         target.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
         //Positionierung des Zieles
         target.move(posX, posY, posZ);
@@ -243,17 +247,30 @@ public class Main extends SimpleApplication {
         public void onAction(String name, boolean keyPressed, float tpf) {
             if (name.equals("Gast") && !keyPressed) {
                 if(!autoWartet){
-                autoWartet = true;
-                System.out.println("Gast Wartet!");
+                    setKoordinates(wp2);
+                    target.move(posX, posY, posZ);
+                    autoWartet = true;
+                    System.out.println("Gast Wartet!");
                 }
             }
         }
     };
     
+    private void setKoordinates(Waypoint wp){
+        //Ziel Position 
+        posX = wp.getX();
+        posZ = wp.getZ();
+        flughoehe = wp.getHeight();
+        bodenhoehe = 0.3f;
+    }
+    
     @Override
     public void simpleUpdate(float tpf) {
-        fliegeZuWP(posX,posZ,flughoehe);
-                this.actionListener = new ActionListener(){
+        if(autoWartet){
+            fliegeZuWP(posX,posZ,flughoehe);
+        }
+        
+        this.actionListener = new ActionListener(){
             public void onAction(String name, boolean pressed, float tpf){
                 System.out.println(name + " = " + pressed);
             }
