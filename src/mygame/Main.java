@@ -27,7 +27,7 @@ public class Main extends SimpleApplication {
     //Ziel Positionswerte
     float posX, posY, posZ, flughoehe, bodenhoehe, toleranz;
     //Status Abfragen
-    boolean xErreicht, zErreicht, zielErreicht, autoWartet;
+    boolean xErreicht, zErreicht, zielErreicht, aktZielErreicht, autoWartet, abholen;
     Vector3f zielposition;
    
     // Le Drone
@@ -37,7 +37,9 @@ public class Main extends SimpleApplication {
     Box zielObj = new Box(Vector3f.ZERO, 0.1f, 0.1f, 0.1f);
     Geometry target = new Geometry("Box", zielObj);
     
-    Waypoint wp1, wp2, wp3;
+    Waypoint wp1, wp2, wp3,aktZiel;
+    Waypoint[] flugroute = new Waypoint [8];
+    int routenlaenge = 0;
        
     public static void main(String[] args) {
                 
@@ -45,10 +47,27 @@ public class Main extends SimpleApplication {
         app.start();
     }
 
-    public void fliegeZuWP (float xKoord, float zKoord, float hoehe){
-        float wpX = xKoord;
-        float wpZ = zKoord;
-        float height = hoehe;
+    public void erstelleFlugroute(){
+        flugroute[0]=wp1;
+        flugroute[1]=wp2;
+        flugroute[2]=wp3;
+                
+        for(int i=0; i < flugroute.length; i++){
+            if(flugroute[i]!=null){
+                routenlaenge++;
+            }
+        }
+        
+        System.out.println("Die Route besteht aus: "+routenlaenge+" Stationen");
+        System.out.println("Station 1: "+wp1.x+", "+wp1.z);
+        System.out.println("Station 2: "+wp2.x+", "+wp2.z);
+        System.out.println("Station 3: "+wp3.x+", "+wp3.z);
+    }
+    
+    public void fliegeZuWP (Waypoint wp){
+        float wpX = wp.x;
+        float wpZ = wp.z;
+        float height = wp.flughoehe;
         float winkel, ziel;
         
         Vector3f pos = drone.getLocalTranslation();
@@ -76,7 +95,7 @@ public class Main extends SimpleApplication {
         else{
             if (zErreicht != false){
                 zErreicht = false;
-                System.out.println("Z_false");                
+                //System.out.println("Z_false");                
             }
         }
         
@@ -125,6 +144,14 @@ public class Main extends SimpleApplication {
         }
     }
         
+    public void naechsterWP(){
+        for(int i =0; i < routenlaenge; i++){
+            if (!flugroute[i].getErreicht()){
+                aktZiel = flugroute[i];
+            }
+        }
+    }
+    
     @Override
     public void simpleInitApp() {        
         //Tastenbelegung laden
@@ -146,6 +173,7 @@ public class Main extends SimpleApplication {
         zErreicht = false;
         zielErreicht = false;
         autoWartet = false;
+        abholen = false;
         
         zielposition = new Vector3f(posX,posY,posZ);
         System.out.println("Ziel: "+posX+", "+posY+", "+posZ);
@@ -238,36 +266,49 @@ public class Main extends SimpleApplication {
     private void initKeys() {
         // Drücken der Leertaste zeigt an, dass ein Fahrzeug angekommen ist
         inputManager.addMapping("Gast",  new KeyTrigger(KeyInput.KEY_SPACE));
+        inputManager.addMapping("Route",  new KeyTrigger(KeyInput.KEY_R));
 
         // Hinzufügen des Tastendrucks zum inputManager
         inputManager.addListener(actionListener, new String[]{"Gast"});
+        inputManager.addListener(actionListener, new String[]{"Route"});
     }
     
     private ActionListener actionListener = new ActionListener() {
         public void onAction(String name, boolean keyPressed, float tpf) {
             if (name.equals("Gast") && !keyPressed) {
                 if(!autoWartet){
-                    setKoordinates(wp2);
+                    setKoordinates(wp1);
                     target.move(posX, posY, posZ);
                     autoWartet = true;
                     System.out.println("Gast Wartet!");
                 }
+            }
+            if (name.equals("Route") && !keyPressed) {
+                //Noch passiert nichts
             }
         }
     };
     
     private void setKoordinates(Waypoint wp){
         //Ziel Position 
-        posX = wp.getX();
-        posZ = wp.getZ();
-        flughoehe = wp.getHeight();
+        posX = wp.x;
+        posZ = wp.z;
+        flughoehe = wp.flughoehe;
         bodenhoehe = 0.3f;
     }
     
     @Override
     public void simpleUpdate(float tpf) {
         if(autoWartet){
-            fliegeZuWP(posX,posZ,flughoehe);
+            //berechneFlugroute();
+            erstelleFlugroute();
+            naechsterWP();
+            autoWartet = false;
+            abholen = true;
+        }
+        
+        if(abholen){
+            fliegeZuWP(aktZiel);
         }
         
         this.actionListener = new ActionListener(){
