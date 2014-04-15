@@ -84,7 +84,7 @@ public class Main extends SimpleApplication {
         else{
             if (xErreicht != false){
                 xErreicht = false; 
-                System.out.println("X_false");
+                //System.out.println("X_false");
             }
         }
         
@@ -97,6 +97,11 @@ public class Main extends SimpleApplication {
                 zErreicht = false;
                 //System.out.println("Z_false");                
             }
+        }
+        
+        if(zErreicht && xErreicht){
+            wp.erreicht = true;
+            naechsterWP();
         }
         
         if (zErreicht && xErreicht && pos.y <= bodenhoehe){
@@ -147,7 +152,11 @@ public class Main extends SimpleApplication {
     public void naechsterWP(){
         for(int i =0; i < routenlaenge; i++){
             if (!flugroute[i].getErreicht()){
+                System.out.println("Aktueller WP: "+i+".   Erreicht: "+flugroute[i].getErreicht());
                 aktZiel = flugroute[i];
+                zielposition = (new Vector3f(aktZiel.x,aktZiel.flughoehe,aktZiel.z));
+                target.setLocalTranslation(zielposition.x,0.2f,zielposition.z);
+                break;
             }
         }
     }
@@ -166,8 +175,8 @@ public class Main extends SimpleApplication {
         
         //Waypoints einrichten
         wp1 = new Waypoint(2,4,2);
-        wp2 = new Waypoint(-3,2,2);
-        wp3 = new Waypoint(0,1,2);
+        wp2 = new Waypoint(-3,4,2);
+        wp3 = new Waypoint(0,4,2);
         
         xErreicht = false;
         zErreicht = false;
@@ -176,7 +185,6 @@ public class Main extends SimpleApplication {
         abholen = false;
         
         zielposition = new Vector3f(posX,posY,posZ);
-        System.out.println("Ziel: "+posX+", "+posY+", "+posZ);
         
         // Brauner Boden
         Box b = new Box(Vector3f.ZERO, 14, 0.1f, 8);
@@ -186,7 +194,7 @@ public class Main extends SimpleApplication {
         // Aktuelles Ziel
         target.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
         //Positionierung des Zieles
-        target.move(posX, posY, posZ);
+        target.setLocalTranslation(posX, posY, posZ);
         
         //Positionierung und Ausrichtung der Drone
         drone.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
@@ -277,7 +285,7 @@ public class Main extends SimpleApplication {
         public void onAction(String name, boolean keyPressed, float tpf) {
             if (name.equals("Gast") && !keyPressed) {
                 if(!autoWartet){
-                    setKoordinates(wp1);
+                    setzeStartWP(wp1);
                     target.move(posX, posY, posZ);
                     autoWartet = true;
                     System.out.println("Gast Wartet!");
@@ -289,7 +297,7 @@ public class Main extends SimpleApplication {
         }
     };
     
-    private void setKoordinates(Waypoint wp){
+    private void setzeStartWP(Waypoint wp){
         //Ziel Position 
         posX = wp.x;
         posZ = wp.z;
