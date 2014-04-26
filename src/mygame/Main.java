@@ -24,34 +24,54 @@ import com.jme3.shadow.DirectionalLightShadowRenderer;
 
 public class Main extends SimpleApplication {
 
+    /*Variablendeklaration*/
+    //3D Objekte
+    Dome mesh;
+    Box zielObj;
+    Geometry drone;
+    Geometry target;
+    
     //Ziel Positionswerte
     float posX, posY, posZ, flughoehe, bodenhoehe, toleranz;
-    //Status Abfragen
-    boolean xErreicht, zErreicht, zielErreicht, aktZielErreicht, autoWartet, abholen;
-    Vector3f zielposition;
-   
-    // Le Drone
-    Dome mesh = new Dome(Vector3f.ZERO, 2, 3, .4f,false);
-    Geometry drone = new Geometry("Drone", mesh);
-    // Zielposition Anzeige
-    Box zielObj = new Box(Vector3f.ZERO, 0.1f, 0.1f, 0.1f);
-    Geometry target = new Geometry("Box", zielObj);
     
-    Waypoint wp1, wp2, wp3,aktZiel;
-    Waypoint[] flugroute = new Waypoint [8];
+    //Status Abfragen
+    boolean xErreicht, zErreicht, zielErreicht, aktZielErreicht, autoWartet, abholen, droneBusy;
+    Vector3f zielposition;
+          
+    //Wegepunkte
+    Waypoint parkStation, einfahrt, wp1, wp2, wp3,aktZiel;
+    Waypoint[] flugroute;
     int routenlaenge = 0;
+    
+    /*Konstruktor*/
+    public Main (){
+    // Die Drone
+    mesh = new Dome(Vector3f.ZERO, 2, 3, .4f,false);
+    drone = new Geometry("Drone", mesh);
+    
+    // Zielposition Anzeige
+    zielObj = new Box(Vector3f.ZERO, 0.1f, 0.1f, 0.1f);
+    target = new Geometry("Box", zielObj);
+    
+    // Wegpunkte Array
+    flugroute = new Waypoint [8];
+    }
        
-    public static void main(String[] args) {
-                
+    public static void main(String[] args) {              
         Main app = new Main();
         app.start();
     }
-
+    
+    /*Hier wird die Flugroute erstellt.
+     * Die errechneten Wegpunkte werden in ein eigenes Array gespeichert und einer Drohne zugewiesen*/
     public void erstelleFlugroute(){
-        flugroute[0]=wp1;
-        flugroute[1]=wp2;
-        flugroute[2]=wp3;
+        routenlaenge =0;
+        flugroute[0]=einfahrt;
+        flugroute[1]=wp1;
+        flugroute[2]=wp2;
+        flugroute[3]=wp3;
                 
+        //Durchsuchen des Arrays nach einem Wegpunkt, der noch nicht erreicht wurde
         for(int i=0; i < flugroute.length; i++){
             if(flugroute[i]!=null){
                 routenlaenge++;
@@ -64,19 +84,30 @@ public class Main extends SimpleApplication {
         System.out.println("Station 3: "+wp3.x+", "+wp3.z);
     }
     
+    //Flugspeicher leeren
+    public void leereFlugroute(){
+        for(int i=0; i < 8; i++){
+            if(flugroute[i]!=null){
+                flugroute[i].setNichtErreicht();
+                System.out.println("Flugroute "+flugroute[i]+" erreicht: "+flugroute[i].erreicht);
+                flugroute[i] = null;
+                zielErreicht = false;
+            }
+            System.out.println("Flugroute geleert!");
+        }
+    }
+    
+    /*Abheben, fliegen und Landen zu einem Wegpunkt in einer vorgegebenen hoehe.*/
     public void fliegeZuWP (Waypoint wp){
         float wpX = wp.x;
         float wpZ = wp.z;
         float height = wp.flughoehe;
-        float winkel, ziel;
         
+        droneBusy = true;
+        //aktuelle Position der Drohne ermitteln
         Vector3f pos = drone.getLocalTranslation();
-        
-        winkel = drone.getWorldRotation().getY();
-        //System.out.println("winkel: "+winkel);
-        ziel = drone.getWorldTranslation().angleBetween(pos);
-        //System.out.println("zwischen: "+ziel);
-        
+                
+        /*Überprüfung ob die X-Koordinate erreicht wurde.*/
         if (pos.x < wpX+toleranz && pos.x > wpX-toleranz){
             xErreicht = true;
             //System.out.println("X erreicht!");
@@ -88,6 +119,7 @@ public class Main extends SimpleApplication {
             }
         }
         
+        /*Überprüfung ob die Z-Koordinate erreicht wurde.*/
         if (pos.z < wpZ+toleranz && pos.z > wpZ-toleranz){
             zErreicht = true;
             //System.out.println("Z erreicht!");
@@ -99,36 +131,52 @@ public class Main extends SimpleApplication {
             }
         }
         
+        /*Sobald ein Wegpunkt erreicht wurde, wird dieser als "erreicht" markiert.
+         * Danach soll geprüft werden, ob es einen weiteren Wegpunkt gibt*/
         if(zErreicht && xErreicht){
-            wp.erreicht = true;
+            wp.setErreicht();
             naechsterWP();
         }
         
+        /*Wenn die Drohne am letzten Wegpunkt gelandet ist, ist das Ziel erreicht*/
         if (zErreicht && xErreicht && pos.y <= bodenhoehe){
-            zielErreicht = true;
+            abholen = false;
+            xErreicht = false;
+            zErreicht = false;
+            if(!droneBusy && zielErreicht){
+                leereFlugroute();
+            }
+            if(!abholen && !zielErreicht){
+                setzeStartWP(parkStation);
+                fliegeZuWP(parkStation);
+                zielErreicht = true;
+                droneBusy = true;
+            }
+
         }
         
-        if (!xErreicht | !zErreicht){
-            
+        /*Solange die X und Z Position nicht erreicht ist, soll die Drohne aufsteigen bis sie die angegebene Flughöhe erreicht hat.
+         Dann werden X und Z position überprüft und die Drohne fliegt in die jeweilige Richtung.*/
+        if (!xErreicht | !zErreicht){   
             if(pos.y > height){
                 drone.lookAt(zielposition, Vector3f.UNIT_Y);
                     
-                if (pos.x < wpX-toleranz){
+                if (pos.x < wp.x-toleranz){
                     //System.out.println("X < X: "+pos.x);
                     drone.move(0.02f, 0, 0);
                 }
                 
-                if (pos.z < posZ-toleranz){
+                if (pos.z < wp.z-toleranz){
                     //System.out.println("Z < Z: "+pos.z);
                     drone.move(0, 0, 0.02f);
                 }
                 
-                if (pos.z > posZ+toleranz){
+                if (pos.z > wp.z+toleranz){
                     //System.out.println("Z > Z: "+pos.z);
                     drone.move(0, 0, -0.02f);
                 }
                     
-                if (pos.x > wpX+toleranz){
+                if (pos.x > wp.x+toleranz){
                     //System.out.println("X > X: "+pos.x);
                     drone.move(-0.02f, 0, 0);
                 }
@@ -140,25 +188,64 @@ public class Main extends SimpleApplication {
                     }
             }
         }
+        
+        /*Wenn der Wegpunkt erreicht wurde und die Drohne über dem Boden steht soll diese Landen.*/
         if (xErreicht && zErreicht && pos.y > bodenhoehe){
             drone.move(0, -0.02f, 0);
             //System.out.println("Lande...");
         }
-        if (xErreicht && zErreicht && pos.y <=bodenhoehe){
-            //System.out.println("Position erreicht!");
-        }
     }
-        
+    
+    /*Die Routenliste wird auf ihre Länge überprüft.
+     Dann wird nacheinander ermittelt welcher Wegpunkt noch nicht erreicht wurde.
+     Der nächste unerreichte Punkt wird als aktuelles Ziel markiert.*/
     public void naechsterWP(){
         for(int i =0; i < routenlaenge; i++){
+            System.out.println("Routenlänge: "+routenlaenge);
             if (!flugroute[i].getErreicht()){
-                System.out.println("Aktueller WP: "+i+".   Erreicht: "+flugroute[i].getErreicht());
                 aktZiel = flugroute[i];
                 zielposition = (new Vector3f(aktZiel.x,aktZiel.flughoehe,aktZiel.z));
                 target.setLocalTranslation(zielposition.x,0.2f,zielposition.z);
+                System.out.println("Aktueller WP: "+i+".   Erreicht: "+flugroute[i].getErreicht());
                 break;
             }
         }
+    }
+        
+    /** Tastenzuweisung. */
+    private void initKeys() {
+        // Drücken der Leertaste zeigt an, dass ein Fahrzeug angekommen ist
+        inputManager.addMapping("Gast",  new KeyTrigger(KeyInput.KEY_SPACE));
+        inputManager.addMapping("Route",  new KeyTrigger(KeyInput.KEY_R));
+
+        // Hinzufügen des Tastendrucks zum inputManager
+        inputManager.addListener(actionListener, new String[]{"Gast"});
+        inputManager.addListener(actionListener, new String[]{"Route"});
+    }
+    
+    private ActionListener actionListener = new ActionListener() {
+        public void onAction(String name, boolean keyPressed, float tpf) {
+            if (name.equals("Gast") && !keyPressed) {
+                if(!autoWartet){
+                    setzeStartWP(einfahrt);
+                    target.move(posX, posY, posZ);
+                    autoWartet = true;
+                    zielErreicht = false;
+                    System.out.println("Gast Wartet!");
+                }
+            }
+            if (name.equals("Route") && !keyPressed) {
+                //Noch passiert nichts
+            }
+        }
+    };
+    
+    private void setzeStartWP(Waypoint wp){
+        //Ziel Position 
+        posX = wp.x;
+        posZ = wp.z;
+        flughoehe = wp.flughoehe;
+        bodenhoehe = 0.3f;
     }
     
     @Override
@@ -174,6 +261,8 @@ public class Main extends SimpleApplication {
         toleranz = 0.2f;
         
         //Waypoints einrichten
+        parkStation = new Waypoint (0,0,3);
+        einfahrt = new Waypoint (-1, -1, 2);
         wp1 = new Waypoint(2,4,2);
         wp2 = new Waypoint(-3,4,2);
         wp3 = new Waypoint(0,4,2);
@@ -183,6 +272,7 @@ public class Main extends SimpleApplication {
         zielErreicht = false;
         autoWartet = false;
         abholen = false;
+        droneBusy = false;
         
         zielposition = new Vector3f(posX,posY,posZ);
         
@@ -270,49 +360,17 @@ public class Main extends SimpleApplication {
         cam.lookAt(Vector3f.ZERO, Vector3f.UNIT_Y);
     }
     
-        /** Tastenzuweisung. */
-    private void initKeys() {
-        // Drücken der Leertaste zeigt an, dass ein Fahrzeug angekommen ist
-        inputManager.addMapping("Gast",  new KeyTrigger(KeyInput.KEY_SPACE));
-        inputManager.addMapping("Route",  new KeyTrigger(KeyInput.KEY_R));
-
-        // Hinzufügen des Tastendrucks zum inputManager
-        inputManager.addListener(actionListener, new String[]{"Gast"});
-        inputManager.addListener(actionListener, new String[]{"Route"});
-    }
-    
-    private ActionListener actionListener = new ActionListener() {
-        public void onAction(String name, boolean keyPressed, float tpf) {
-            if (name.equals("Gast") && !keyPressed) {
-                if(!autoWartet){
-                    setzeStartWP(wp1);
-                    target.move(posX, posY, posZ);
-                    autoWartet = true;
-                    System.out.println("Gast Wartet!");
-                }
-            }
-            if (name.equals("Route") && !keyPressed) {
-                //Noch passiert nichts
-            }
-        }
-    };
-    
-    private void setzeStartWP(Waypoint wp){
-        //Ziel Position 
-        posX = wp.x;
-        posZ = wp.z;
-        flughoehe = wp.flughoehe;
-        bodenhoehe = 0.3f;
-    }
-    
     @Override
     public void simpleUpdate(float tpf) {
         if(autoWartet){
             //berechneFlugroute();
-            erstelleFlugroute();
-            naechsterWP();
-            autoWartet = false;
-            abholen = true;
+            if(!abholen){
+                leereFlugroute();
+                erstelleFlugroute();
+                naechsterWP();
+                autoWartet = false;
+                abholen = true;
+            }
         }
         
         if(abholen){
