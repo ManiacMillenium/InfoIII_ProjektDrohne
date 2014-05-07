@@ -4,6 +4,10 @@
  */
 package mygame;
 
+import com.jme3.math.Vector3f;
+import com.jme3.scene.Geometry;
+import com.jme3.scene.shape.Box;
+
 /**
  *
  * @author Maniac
@@ -11,11 +15,24 @@ package mygame;
 public class Waypoint {
     float x,z,flughoehe;
     boolean erreicht = false;
+    int wpID;
+    Box zielObj;
+    Geometry target;
     
     public Waypoint(float koordX, float koordZ,float hoehe){
         x = koordX;
         z = koordZ;
         flughoehe = hoehe;
+        wpID = 0;
+        
+    }
+    
+    public int getID(){
+        return wpID;
+    }
+    
+    public void setID(int id){
+        wpID = id;
     }
     
     public float getX(){
