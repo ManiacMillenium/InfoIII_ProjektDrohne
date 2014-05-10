@@ -14,6 +14,7 @@ import com.jme3.post.FilterPostProcessor;
 import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Geometry;
+import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Box;
 import com.jme3.scene.shape.Dome;
@@ -26,14 +27,15 @@ public class Main extends SimpleApplication {
     //3D Objekte
     Dome mesh;
     Box zielObj;
-    Geometry drone, target;
+    Geometry target;
+    Node drone = new Node();
     
     //Ziel Positionswerte
     float posX, posY, posZ, flugGeschw, flughoehe, bodenhoehe, toleranz;
     
     //Status Abfragen
     boolean xErreicht, zErreicht, zielErreicht, aktZielErreicht, autoWartet, abholen, droneBusy, zurBase, droneParking;
-    Vector3f zielposition;
+    Vector3f ziel;
           
     //Wegepunkte
     Waypoint parkStation, einfahrt, wp1, wp2, wp3,aktZiel;
@@ -42,9 +44,6 @@ public class Main extends SimpleApplication {
     
     /*Konstruktor*/
     public Main (){
-    // Die Drone
-    mesh = new Dome(Vector3f.ZERO, 2, 3, .4f,false);
-    drone = new Geometry("Drone", mesh);
     
     // Zielposition Anzeige
     zielObj = new Box(Vector3f.ZERO, 0.1f, 0.1f, 0.1f);
@@ -122,6 +121,7 @@ public class Main extends SimpleApplication {
         float wpX = wp.x;
         float wpZ = wp.z;
         float height = wp.flughoehe;
+        ziel = new Vector3f(wpX,height,wpZ);
         
         if (!droneBusy){
             droneBusy = true;
@@ -188,7 +188,8 @@ public class Main extends SimpleApplication {
                 //System.out.println("Z-Pos: "+pos.z);
                 //System.out.println("Hoehe: "+pos.y);
             if(pos.y < height+toleranz && pos.y > height-toleranz){
-                drone.lookAt(zielposition, Vector3f.UNIT_Y);
+                drone.rotate(0, 0.1f, 0);
+                //drone.lookAt(ziel, Vector3f.UNIT_Y);
                     
                 if (pos.x < wp.x-toleranz){
                     //System.out.println("X < X: "+pos.x);
@@ -255,8 +256,7 @@ public class Main extends SimpleApplication {
             //System.out.println("Routenlänge: "+routenlaenge);
             if (!flugroute[i].getErreicht()){
                 aktZiel = flugroute[i];
-                zielposition = (new Vector3f(aktZiel.x,aktZiel.flughoehe,aktZiel.z));
-                target.setLocalTranslation(zielposition.x,0.2f,zielposition.z);
+                target.setLocalTranslation(aktZiel.x,0.2f,aktZiel.z);
                 //System.out.println("Aktueller WP: "+i+".   Erreicht: "+flugroute[i].getErreicht());
                 break;
             }
@@ -322,7 +322,7 @@ public class Main extends SimpleApplication {
         posZ = 0;
         flughoehe = 2;
         bodenhoehe = 0.3f;
-        flugGeschw = 0.1f;
+        flugGeschw = 0.05f;
         toleranz = 0.2f+flugGeschw;
         
         //Waypoints einrichten
@@ -339,9 +339,7 @@ public class Main extends SimpleApplication {
         autoWartet = false;
         abholen = false;
         droneBusy = false;
-        
-        zielposition = new Vector3f(posX,posY,posZ);
-                
+                                
         // Brauner Boden
         Box b = new Box(Vector3f.ZERO, 14, 0.1f, 8);
         Geometry geom = new Geometry("Box", b);
@@ -353,10 +351,13 @@ public class Main extends SimpleApplication {
         //Positionierung des Zieles
         target.setLocalTranslation(posX, posY, posZ);
         
+        //Modell Drohne
+        Spatial droneDummy =assetManager.loadModel("Models/AR_Drone_Parrot_Dummy.j3o");
+        drone.attachChild(droneDummy);
         //Positionierung und Ausrichtung der Drone
-        drone.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
-        drone.setLocalTranslation(0, 0.2f, 0);
-        drone.rotate(0f,0f,1.5f);
+        droneDummy.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
+        droneDummy.setLocalTranslation(0, 0.2f, 0);
+        //droneDummy.rotate(0f,0f,1.5f);
         
         //Bodenmaterial
         Material mat_boden;
@@ -383,14 +384,10 @@ public class Main extends SimpleApplication {
         mat_drone.setColor("Diffuse",ColorRGBA.Blue);
         mat_drone.setColor("Specular",ColorRGBA.White);
         mat_drone.setFloat("Shininess", 64f);  // [0,128]
-        drone.setMaterial(mat_drone);
-
-        //Modell Parkplatz
-        //Spatial parkplatz =assetManager.loadModel("Models/Parkplatz_fix.obj");
-        //parkplatz.setMaterial(mat_boden);
+        droneDummy.setMaterial(mat_drone);
+        droneDummy.scale(0.01f);
         
         rootNode.attachChild(geom);
-        //rootNode.attachChild(parkplatz);
         rootNode.attachChild(target);
         rootNode.attachChild(drone);
         
@@ -448,7 +445,7 @@ public class Main extends SimpleApplication {
         //System.out.println("x - Erreicht: "+xErreicht);
         //System.out.println("z - Erreicht: "+zErreicht);
         //System.out.println("Ziel Erreicht: "+zielErreicht);
-        System.out.println("Drone Parkt: "+droneParking);
+        //System.out.println("Drone Parkt: "+droneParking);
         //System.out.println("Auto wartet: "+autoWartet);
         //System.out.println("abholen: "+abholen);
         //System.out.println("Drone Busy: "+droneBusy);
