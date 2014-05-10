@@ -2,21 +2,19 @@ package mygame;
 
 import com.jme3.app.SimpleApplication;
 import com.jme3.input.KeyInput;
-import com.jme3.input.MouseInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
-import com.jme3.input.controls.MouseButtonTrigger;
 import com.jme3.light.AmbientLight;
 import com.jme3.light.DirectionalLight;
 import com.jme3.light.PointLight;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
-import com.jme3.math.Quaternion;
 import com.jme3.math.Vector3f;
 import com.jme3.post.FilterPostProcessor;
 import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.queue.RenderQueue;
 import com.jme3.scene.Geometry;
+import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Box;
 import com.jme3.scene.shape.Dome;
 import com.jme3.shadow.DirectionalLightShadowFilter;
@@ -64,6 +62,7 @@ public class Main extends SimpleApplication {
     /*Hier wird die Flugroute erstellt.
      * Die errechneten Wegpunkte werden in ein eigenes Array gespeichert und einer Drohne zugewiesen*/
     public void erstelleFlugroute(){
+        
         routenlaenge =0;
         flugroute[0]=einfahrt;
         flugroute[1]=wp1;
@@ -88,13 +87,14 @@ public class Main extends SimpleApplication {
     //Flugspeicher leeren
     public void leereFlugroute(){
         routenlaenge = 0;
+
         for(int i=0; i < 8; i++){
             if(flugroute[i]!=null){
                 flugroute[i].setNichtErreicht();
                 flugroute[i].wpID = 0;
                 //System.out.println("Flugroute "+flugroute[i]+" erreicht: "+flugroute[i].erreicht);
                 //flugroute[i] = null;
-                zielErreicht = false;
+                resetVariables();
             }
         }
         System.out.println("Flugroute geleert!");
@@ -106,13 +106,13 @@ public class Main extends SimpleApplication {
         Vector3f pos = drone.getLocalTranslation();
         
         droneParking = false;
-        System.out.println("Drone Parking: "+droneParking);
-        System.out.println("Aktueller WP: "+aktZiel.x+", "+aktZiel.z);
+        //System.out.println("Drone Parking: "+droneParking);
+        //System.out.println("Aktueller WP: "+aktZiel.x+", "+aktZiel.z);
         
         if (pos.y > height){
-            drone.move(0, -flugGeschw, 0);
+            lande();
         }
-        if (pos.y < height){
+        if (pos.y < height && abholen || zurBase){
             drone.move(0, flugGeschw, 0);
         }
     }
@@ -125,7 +125,7 @@ public class Main extends SimpleApplication {
         
         if (!droneBusy){
             droneBusy = true;
-            System.out.println("Drone busy: "+droneBusy);    
+            //System.out.println("Drone busy: "+droneBusy);    
         }
 
         //aktuelle Position der Drohne ermitteln
@@ -168,9 +168,9 @@ public class Main extends SimpleApplication {
                 if (zErreicht && xErreicht && pos.y <= bodenhoehe){
                     abholen = false;
                     droneBusy = false;
-                    System.out.println("Drone busy: "+droneBusy);
+                    //System.out.println("Drone busy: "+droneBusy);
                     zielErreicht = true;
-                    System.out.println("Drone Parking: "+droneParking);
+                    //System.out.println("Drone Parking: "+droneParking);
                     if(!droneBusy && zielErreicht && !droneParking){
                         zurBase = true;
                         System.out.println("Zur Base: "+zurBase);
@@ -213,32 +213,36 @@ public class Main extends SimpleApplication {
             else{
                 hoeheAnpassen(wp);
             }
-            
-            if (pos.x >= parkStation.x-0.3 && pos.z >= parkStation.z-0.3 && pos.y <= bodenhoehe){
-                droneParking = true;
-                System.out.println("Drone Parking: "+droneParking);
-                zurBase = false;
-                droneBusy = false;
-            }
         }
         
+                    //
+            if (zurBase && pos.y <= bodenhoehe && !droneParking && !abholen){
+                resetVariables();
+                droneParking = true;
+            }
+        
         /*Wenn der Wegpunkt erreicht wurde und die Drohne über dem Boden steht soll diese Landen.*/
-        if (xErreicht && zErreicht && pos.y > bodenhoehe){
-            drone.move(0, -flugGeschw, 0);
-            //System.out.println("Lande...");
+        if (xErreicht && zErreicht && pos.y > bodenhoehe && !droneParking){
+            lande();
         }
+    }
+    
+    //Landet die Drohne
+    public void lande(){
+        drone.move(0, -flugGeschw, 0);
+        //System.out.println("Lande...");
     }
     
     //Lässt die Drohne zur Parkstation fliegen
     public void fliegeZurBase (){
-        System.out.println("zielErreicht: "+zielErreicht);
+        //System.out.println("zielErreicht: "+zielErreicht);
         if(zielErreicht){
             leereFlugroute();
             routenlaenge = 1;
             //aktZiel = parkStation;
             //setzeStartWP(parkStation);
-            zurBase = true;
             zielErreicht = false;
+            zurBase = true;
         }
     }
     
@@ -279,6 +283,7 @@ public class Main extends SimpleApplication {
                     target.move(posX, posY, posZ);
                     autoWartet = true;
                     zielErreicht = false;
+                    droneParking = false;
                     System.out.println("Gast Wartet!");
                 }
             }
@@ -296,6 +301,17 @@ public class Main extends SimpleApplication {
         bodenhoehe = 0.3f;
     }
     
+    private void resetVariables(){
+        xErreicht = false;
+        zErreicht = false;
+        zielErreicht = false;
+        droneParking = true;
+        autoWartet = false;
+        abholen = false;
+        droneBusy = false;
+        System.out.println("Variablen zurückgesetzt.");
+    }
+    
     @Override
     public void simpleInitApp() {        
         //Tastenbelegung laden
@@ -306,12 +322,12 @@ public class Main extends SimpleApplication {
         posZ = 0;
         flughoehe = 2;
         bodenhoehe = 0.3f;
-        toleranz = 0.2f;
-        flugGeschw = 0.04f;
+        flugGeschw = 0.1f;
+        toleranz = 0.2f+flugGeschw;
         
         //Waypoints einrichten
         parkStation = new Waypoint (0,0,4);
-        einfahrt = new Waypoint (1, -1, 4);
+        einfahrt = new Waypoint (1, -2, 4);
         wp1 = new Waypoint(-2,-12,2);
         wp2 = new Waypoint(-18,-12,2);
         wp3 = new Waypoint(-18,-2,2);
@@ -325,7 +341,7 @@ public class Main extends SimpleApplication {
         droneBusy = false;
         
         zielposition = new Vector3f(posX,posY,posZ);
-        
+                
         // Brauner Boden
         Box b = new Box(Vector3f.ZERO, 14, 0.1f, 8);
         Geometry geom = new Geometry("Box", b);
@@ -369,7 +385,12 @@ public class Main extends SimpleApplication {
         mat_drone.setFloat("Shininess", 64f);  // [0,128]
         drone.setMaterial(mat_drone);
 
+        //Modell Parkplatz
+        //Spatial parkplatz =assetManager.loadModel("Models/Parkplatz_fix.obj");
+        //parkplatz.setMaterial(mat_boden);
+        
         rootNode.attachChild(geom);
+        //rootNode.attachChild(parkplatz);
         rootNode.attachChild(target);
         rootNode.attachChild(drone);
         
@@ -419,17 +440,30 @@ public class Main extends SimpleApplication {
                 leereFlugroute();
                 erstelleFlugroute();
                 naechsterWP();
-                autoWartet = false;
+                droneParking = false;
                 abholen = true;
             }
         }
         
+        //System.out.println("x - Erreicht: "+xErreicht);
+        //System.out.println("z - Erreicht: "+zErreicht);
+        //System.out.println("Ziel Erreicht: "+zielErreicht);
+        System.out.println("Drone Parkt: "+droneParking);
+        //System.out.println("Auto wartet: "+autoWartet);
+        //System.out.println("abholen: "+abholen);
+        //System.out.println("Drone Busy: "+droneBusy);
+        
         if(abholen){
+            zurBase = false;
             fliegeZuWP(aktZiel);
+        }
+        
+        if(droneParking){
         }
         
         if (zurBase){
             //System.out.println("Fliege zur Base!");
+            abholen = false;
             fliegeZuWP(parkStation);
         }
         this.actionListener = new ActionListener(){
