@@ -1,10 +1,5 @@
-/*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
- */
 package mygame;
 
-import com.jme3.math.Vector3f;
 import com.jme3.scene.Geometry;
 import com.jme3.scene.shape.Box;
 
@@ -23,8 +18,7 @@ public class Waypoint {
         x = koordX;
         z = koordZ;
         flughoehe = hoehe;
-        wpID = 0;
-        
+        wpID = 0;      
     }
     
     public int getID(){

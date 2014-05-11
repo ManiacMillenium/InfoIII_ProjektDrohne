@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nifty xmlns="http://nifty-gui.sourceforge.net/nifty.xsd" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+       xsi:schemaLocation="http://nifty-gui.sourceforge.net/nifty.xsd http://nifty-gui.sourceforge.net/nifty.xsd">
+    
+    <useStyles filename="nifty-default-styles.xml" />
+    <useControls filename="nifty-default-controls.xml" />
+    <registerSound id="mySound" filename="Sounds/startSound.ogg" />
+    
+    <screen id="start" controller="mygame.GUI.MainMenuController">
+        <layer id="backgroundLayer" childLayout="absolute">
+            <panel id="popUp" width="761px" height="725px" backgroundImage="Interface/popUp.png" x="404px" y="661px" visibleToMouse="true" childLayout="center">
+                <effect>
+                    <onStartScreen name="playSound" sound="mySound" />
+                    <onStartScreen name="move" mode="in" direction="bottom" length="1000" inherit="true" /> 
+                    <onCustom name="move"  direction="bottom" length="1000" inherit="true" />                
+                </effect>
+                <layer id="hauptBackground" childLayout="center">
+                    <panel id="hauptInterface" width="100%" height="100%" backgroundImage="Interface/background.png" childLayout="center">
+                       <layer id="schaltEbene" childLayout="absolute"> 
+                            <panel id="pfeilPanel" width="217px" height="16px" x="850px" y="661px" childLayout="center">                                                                                            
+                                <effect>
+                                    <onStartHover name="hide" targetElement="pfeilPic" />
+                                    <onEndHover name="show" targetElement="pfeilPic" />
+                                    <onStartScreen name="move" mode="in" direction="bottom" length="1000" inherit="true"/>
+                                    <onCustom name="move" direction="bottom" length="1000" inherit="true" />
+                                </effect>
+                                <interact onClick="onPfeilClicked()"/>   
+                                <image id="pfeilPic" filename="Interface/pfeilHover.png" />                                                           
+                            </panel>
+                            <panel id="buttonPanel" width="348px" height="38px" x="450px" y="713px" childLayout="center">
+                                <layer id="buttonLayer" childLayout="absolute" visibleToMouse="true">
+                                    <panel id="buttonNF" width="38px" height="38px" x="450px" y="713px" backgroundImage="Interface/buttonNF.png" childLayout="center">
+                                        <interact onClick="onNeuesFahrzeug()"/>                              
+                                    </panel>
+                                    <panel id="buttonAIE" width="38px" height="38px" x="527px" y="713px" backgroundImage="Interface/buttonAIE.png" childLayout="center">
+                                        <interact onClick="onAlleImEinsatz()"/>                               
+                                    </panel>
+                                    <panel id="buttonDS" width="38px" height="38px" x="605px" y="713px" backgroundImage="Interface/buttonDS.png" childLayout="center">
+                                        <interact onClick="onDrohneSchaden()"/>                               
+                                    </panel>
+                                    <panel id="buttonFS" width="38px" height="38px" x="683px" y="713px" backgroundImage="Interface/buttonFP.png" childLayout="center">
+                                        <interact onClick="onFalschesParken()"/>                               
+                                    </panel>
+                                    <panel id="buttonSS" width="38px" height="38px" x="760px" y="713px" backgroundImage="Interface/buttonSS.png" childLayout="center">
+                                        <interact onClick="onStrassenSchaden()"/>                               
+                                    </panel>
+                                    <panel id="togglePanel" width="26px" height="92px" x="1119px" y="690px" backgroundImage="Interface/hauptSchalterAus.png" childLayout="center">
+                                        <interact onClick="hauptSchalter()"/>                           
+                                    </panel>
+                                    <panel id="display" width="247px" height="89px" x="87px" y="691px" childLayout="center">                          
+                                    </panel>
+                                </layer>
+                            </panel>
+                       </layer>     
+                    </panel>    
+                </layer>
+            </panel> 
+        </layer>
+    </screen>
+
+</nifty>

@@ -1,6 +1,7 @@
 package mygame;
 
 import com.jme3.app.SimpleApplication;
+import com.jme3.font.BitmapText;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
@@ -10,6 +11,7 @@ import com.jme3.light.PointLight;
 import com.jme3.material.Material;
 import com.jme3.math.ColorRGBA;
 import com.jme3.math.Vector3f;
+import com.jme3.niftygui.NiftyJmeDisplay;
 import com.jme3.post.FilterPostProcessor;
 import com.jme3.renderer.RenderManager;
 import com.jme3.renderer.queue.RenderQueue;
@@ -18,10 +20,24 @@ import com.jme3.scene.Node;
 import com.jme3.scene.Spatial;
 import com.jme3.scene.shape.Box;
 import com.jme3.scene.shape.Dome;
+import com.jme3.scene.shape.Sphere;
 import com.jme3.shadow.DirectionalLightShadowFilter;
 import com.jme3.shadow.DirectionalLightShadowRenderer;
+import com.jme3.system.AppSettings;
+import com.jme3.util.SkyFactory;
+import de.lessvoid.nifty.Nifty;
+import mygame.GUI.MainMenuController;
 
 public class Main extends SimpleApplication {
+
+    public static void onAction() {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
+    }
+    
+    private MainMenuController myMainMenuController;
+    private Sphere sphereMesh = new Sphere(32, 32, 10, false, true);
+    private Geometry sphere = new Geometry("Sky", sphereMesh);
+    private static boolean useHttp = false;
 
     /*Variablendeklaration*/
     //3D Objekte
@@ -44,17 +60,22 @@ public class Main extends SimpleApplication {
     
     /*Konstruktor*/
     public Main (){
-    
-    // Zielposition Anzeige
-    zielObj = new Box(Vector3f.ZERO, 0.1f, 0.1f, 0.1f);
-    target = new Geometry("Box", zielObj);
-    
     // Wegpunkte Array
     flugroute = new Waypoint [8];
     }
        
     public static void main(String[] args) {              
         Main app = new Main();
+        app.setShowSettings(false);
+        AppSettings settings = new AppSettings(true);
+        settings.put("Width", 1280);
+        settings.put("Height", 800);
+        settings.put("Title", "The Drone Model");
+        settings.put("VSync", true);
+        settings.put("Samples", 4);        
+        app.setDisplayFps(false);
+        app.setDisplayStatView(false);        
+        app.setSettings(settings);
         app.start();
     }
     
@@ -339,94 +360,103 @@ public class Main extends SimpleApplication {
         autoWartet = false;
         abholen = false;
         droneBusy = false;
-                                
-        // Brauner Boden
-        Box b = new Box(Vector3f.ZERO, 14, 0.1f, 8);
-        Geometry geom = new Geometry("Box", b);
-        geom.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
-        geom.setLocalTranslation(-13, 0, -7);
-
-        // Aktuelles Ziel
-        target.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
-        //Positionierung des Zieles
-        target.setLocalTranslation(posX, posY, posZ);
         
-        //Modell Drohne
-        Spatial droneDummy =assetManager.loadModel("Models/AR_Drone_Parrot_Dummy.j3o");
-        drone.attachChild(droneDummy);
-        //Positionierung und Ausrichtung der Drone
-        droneDummy.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
-        droneDummy.setLocalTranslation(0, 0.2f, 0);
-        //droneDummy.rotate(0f,0f,1.5f);
-        
-        //Bodenmaterial
-        Material mat_boden;
-        mat_boden = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
-        mat_boden.setBoolean("UseMaterialColors",true);    
-        mat_boden.setColor("Diffuse",ColorRGBA.White);
-        mat_boden.setColor("Specular",ColorRGBA.White);
-        mat_boden.setFloat("Shininess", 12f);  // [0,128]
-        geom.setMaterial(mat_boden);
-
-        //Zielobjekt Material
-        Material mat_target;
-        mat_target = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
+        //Das Grundobjekt
+        Spatial parkplatz = assetManager.loadModel("Models/parkplatzNeu_2.j3o");
+        parkplatz.scale(0.05f, 0.05f, 0.05f);
+        parkplatz.rotate(0.0f, -3.14f, 0.0f);
+        parkplatz.setLocalTranslation(0.0f, 0.1f, -10.0f);
+        parkplatz.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
+        rootNode.attachChild(parkplatz);        
+        Material mat_parkplatz = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
+        mat_parkplatz.setBoolean("UseMaterialColors",true);    
+        mat_parkplatz.setColor("Diffuse",ColorRGBA.White);
+        mat_parkplatz.setColor("Specular",ColorRGBA.White);
+        mat_parkplatz.setFloat("Shininess", 100f); 
+        parkplatz.setMaterial(mat_parkplatz); 
+                                          
+        // Aktuelles Ziel       
+        zielObj = new Box(Vector3f.ZERO, 0.1f, 0.1f, 0.1f);
+        target = new Geometry("Box", zielObj);              
+        Material mat_target = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         mat_target.setBoolean("UseMaterialColors",true);    
         mat_target.setColor("Diffuse",ColorRGBA.Yellow);
         mat_target.setColor("Specular",ColorRGBA.White);
         mat_target.setFloat("Shininess", 12f);  // [0,128]
         target.setMaterial(mat_target);
+        target.setLocalTranslation(posX, posY, posZ);
+        target.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
         
-        //Dronenmaterial
-        Material mat_drone;
-        mat_drone = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
+        // Drohne
+        Spatial droneDummy = assetManager.loadModel("Models/AR_Drone_Parrot_Dummy.j3o");
+        droneDummy.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
+        droneDummy.setLocalTranslation(0, 0.2f, 0);
+        droneDummy.scale(0.01f);        
+        Material mat_drone = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
         mat_drone.setBoolean("UseMaterialColors",true);    
         mat_drone.setColor("Diffuse",ColorRGBA.Blue);
         mat_drone.setColor("Specular",ColorRGBA.White);
         mat_drone.setFloat("Shininess", 64f);  // [0,128]
-        droneDummy.setMaterial(mat_drone);
-        droneDummy.scale(0.01f);
-        
-        rootNode.attachChild(geom);
+        droneDummy.setMaterial(mat_drone);        
+        drone.attachChild(droneDummy);
         rootNode.attachChild(target);
-        rootNode.attachChild(drone);
-        
-        /** Must add a light to make the lit object visible! */
+        rootNode.attachChild(drone);               
+       
+        // Licht
         DirectionalLight sun = new DirectionalLight();
         sun.setDirection(new Vector3f(-1,-1,-1).normalizeLocal());
-        sun.setColor(ColorRGBA.Gray);
-        rootNode.addLight(sun);
-    
+        sun.setColor(ColorRGBA.White);
+        rootNode.addLight(sun);    
         PointLight licht1 = new PointLight();
         licht1.setPosition(new Vector3f(0,2,0));
         licht1.setRadius(800f);
         licht1.setColor(ColorRGBA.White);
-        rootNode.addLight(licht1);
-    
+        rootNode.addLight(licht1);    
         AmbientLight ambiLicht = new AmbientLight();
-        ambiLicht.setColor(ColorRGBA.White.mult(1.8f));
+        ambiLicht.setColor(ColorRGBA.White.mult(3.8f));
         rootNode.addLight(ambiLicht);
     
-        /* Drop shadows */
+        // Schatten
         final int SHADOWMAP_SIZE=1024;
         DirectionalLightShadowRenderer dlsr = new DirectionalLightShadowRenderer(assetManager, SHADOWMAP_SIZE, 3);
         dlsr.setLight(sun);
         viewPort.addProcessor(dlsr);
- 
         DirectionalLightShadowFilter dlsf = new DirectionalLightShadowFilter(assetManager, SHADOWMAP_SIZE, 3);
         dlsf.setLight(sun);
         dlsf.setEnabled(true);
         FilterPostProcessor fpp = new FilterPostProcessor(assetManager);
         fpp.addFilter(dlsf);
         viewPort.addProcessor(fpp);
-    
-            
-        //Kamera Position und Ausrichtung fest einstellen
-        //flyCam.setEnabled(false);           // Kamera einfrieren
-        final float ar = (float) this.settings.getWidth() / (float) this.settings.getHeight();
-        cam.setFrustumPerspective(75, ar, 0.1f, 1000.0f);
-        cam.setLocation(new Vector3f(-14, 14, -16));
-        cam.lookAt(new Vector3f(-14, 0, -8), Vector3f.UNIT_Y);
+        
+        // Kamera
+        flyCam.setDragToRotate(true);
+        flyCam.setMoveSpeed(50);
+        flyCam.setRotationSpeed(10);           
+        Vector3f dir = new Vector3f(-0.8404675f, -0.31721875f, -0.43930244f);
+        Vector3f up = new Vector3f(-0.28068435f, 0.948352f, -0.14780009f);
+        Vector3f left = new Vector3f(-0.46349823f, 9.1584027E-4f, 0.8860974f);        
+        cam.setAxes(left,up,dir);        
+        cam.setLocation(new Vector3f(45f, 10f, 10f)); 
+        
+        // GUI      
+        myMainMenuController = new MainMenuController();
+        stateManager.attach(myMainMenuController);       
+        NiftyJmeDisplay niftyDisplay = new NiftyJmeDisplay(assetManager, inputManager, audioRenderer, guiViewPort);
+        Nifty nifty = niftyDisplay.getNifty();
+        guiViewPort.addProcessor(niftyDisplay);
+        nifty.fromXml("Interface/MainMenuLayout.xml", "start", myMainMenuController);
+        
+        // Display
+        guiNode.detachAllChildren();
+        guiFont = assetManager.loadFont("Interface/Fonts/Default.fnt");
+        BitmapText helloText = new BitmapText(guiFont, false);
+        helloText.setSize(10);
+        helloText.setText("hier soll dann die Info sichtbar sein");
+        helloText.setLocalTranslation(100, 100, 0);
+        guiNode.attachChild(helloText);
+        
+        //Background
+        rootNode.attachChild(SkyFactory.createSky(assetManager, "Textures/Chrome.dds", false));
     }
     
     @Override
@@ -468,6 +498,12 @@ public class Main extends SimpleApplication {
                 System.out.println(name + " = " + pressed);
             }
         };
+        
+        //System.out.println("Direction = " + cam.getDirection());
+        //System.out.println("Up = " + cam.getUp());
+        //System.out.println("Left = " +cam.getLeft());
+        
+        sphere.setLocalTranslation(cam.getLocation());
     }
 
     @Override
