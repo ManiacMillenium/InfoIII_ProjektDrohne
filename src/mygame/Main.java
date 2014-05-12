@@ -343,15 +343,15 @@ public class Main extends SimpleApplication {
         posZ = 0;
         flughoehe = 2;
         bodenhoehe = 0.3f;
-        flugGeschw = 0.05f;
+        flugGeschw = 0.1f;
         toleranz = 0.2f+flugGeschw;
         
         //Waypoints einrichten
-        parkStation = new Waypoint (0,0,4);
-        einfahrt = new Waypoint (1, -2, 4);
-        wp1 = new Waypoint(-2,-12,2);
-        wp2 = new Waypoint(-18,-12,2);
-        wp3 = new Waypoint(-18,-2,2);
+        parkStation = new Waypoint (0,0,5);
+        einfahrt = new Waypoint (8, -5, 5);
+        wp1 = new Waypoint(8,-18,2);
+        wp2 = new Waypoint(-15,-18,2);
+        wp3 = new Waypoint(-15,-2,2);
         
         xErreicht = false;
         zErreicht = false;
@@ -365,7 +365,7 @@ public class Main extends SimpleApplication {
         Spatial parkplatz = assetManager.loadModel("Models/parkplatzNeu_2.j3o");
         parkplatz.scale(0.05f, 0.05f, 0.05f);
         parkplatz.rotate(0.0f, -3.14f, 0.0f);
-        parkplatz.setLocalTranslation(0.0f, 0.1f, -10.0f);
+        parkplatz.setLocalTranslation(-13, 0, -10.0f);
         parkplatz.setShadowMode(RenderQueue.ShadowMode.CastAndReceive);
         rootNode.attachChild(parkplatz);        
         Material mat_parkplatz = new Material(assetManager, "Common/MatDefs/Light/Lighting.j3md");
@@ -432,11 +432,14 @@ public class Main extends SimpleApplication {
         flyCam.setDragToRotate(true);
         flyCam.setMoveSpeed(50);
         flyCam.setRotationSpeed(10);           
-        Vector3f dir = new Vector3f(-0.8404675f, -0.31721875f, -0.43930244f);
-        Vector3f up = new Vector3f(-0.28068435f, 0.948352f, -0.14780009f);
-        Vector3f left = new Vector3f(-0.46349823f, 9.1584027E-4f, 0.8860974f);        
-        cam.setAxes(left,up,dir);        
-        cam.setLocation(new Vector3f(45f, 10f, 10f)); 
+        //Vector3f dir = new Vector3f(-0.8404675f, -0.31721875f, -0.43930244f);
+        //Vector3f up = new Vector3f(-0.28068435f, 0.948352f, -0.14780009f);
+        //Vector3f left = new Vector3f(-0.46349823f, 9.1584027E-4f, 0.8860974f);        
+        //cam.setAxes(left,up,dir); 
+        final float ar = (float) this.settings.getWidth()/(float)this.settings.getHeight();
+        cam.setFrustumPerspective(75, ar, 0.1f, 1000.0f);
+        cam.setLocation(new Vector3f(-4, 14, -26));
+        cam.lookAt(new Vector3f(-4, 0, -8), Vector3f.UNIT_Y);
         
         // GUI      
         myMainMenuController = new MainMenuController();
