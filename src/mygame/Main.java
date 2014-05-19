@@ -1,6 +1,10 @@
 package mygame;
 
 import com.jme3.app.SimpleApplication;
+import com.jme3.bullet.BulletAppState;
+import com.jme3.bullet.collision.shapes.CollisionShape;
+import com.jme3.bullet.control.RigidBodyControl;
+import com.jme3.bullet.util.CollisionShapeFactory;
 import com.jme3.font.BitmapText;
 import com.jme3.input.KeyInput;
 import com.jme3.input.controls.ActionListener;
@@ -38,6 +42,12 @@ public class Main extends SimpleApplication {
     private Sphere sphereMesh = new Sphere(32, 32, 10, false, true);
     private Geometry sphere = new Geometry("Sky", sphereMesh);
     private static boolean useHttp = false;
+    private BulletAppState bulletAppState;
+    private RigidBodyControl parkplatzcontrol;
+    private RigidBodyControl autocontrol; 
+    public Spatial Auto;
+    
+    
 
     /*Variablendeklaration*/
     //3D Objekte
@@ -290,11 +300,16 @@ public class Main extends SimpleApplication {
         // Drücken der Leertaste zeigt an, dass ein Fahrzeug angekommen ist
         inputManager.addMapping("Gast",  new KeyTrigger(KeyInput.KEY_SPACE));
         inputManager.addMapping("Route",  new KeyTrigger(KeyInput.KEY_R));
+        inputManager.addMapping("Auto erscheint", new KeyTrigger(KeyInput.KEY_SPACE));
 
         // Hinzufügen des Tastendrucks zum inputManager
         inputManager.addListener(actionListener, new String[]{"Gast"});
         inputManager.addListener(actionListener, new String[]{"Route"});
+        inputManager.addListener(actionListener, new String[]{"Auto erscheint"});
+        
     }
+    
+    
     
     private ActionListener actionListener = new ActionListener() {
         public void onAction(String name, boolean keyPressed, float tpf) {
@@ -311,6 +326,13 @@ public class Main extends SimpleApplication {
             if (name.equals("Route") && !keyPressed) {
                 //Noch passiert nichts
             }
+         if (name.equals("Auto erscheint")&&!keyPressed){
+             if(!autoWartet){
+                 rootNode.attachChild(Auto);
+               }
+             else 
+                  rootNode.detachChild(Auto);
+         }
         }
     };
     
@@ -374,6 +396,7 @@ public class Main extends SimpleApplication {
         mat_parkplatz.setColor("Specular",ColorRGBA.White);
         mat_parkplatz.setFloat("Shininess", 100f); 
         parkplatz.setMaterial(mat_parkplatz); 
+       
                                           
         // Aktuelles Ziel       
         zielObj = new Box(Vector3f.ZERO, 0.1f, 0.1f, 0.1f);
@@ -400,7 +423,14 @@ public class Main extends SimpleApplication {
         droneDummy.setMaterial(mat_drone);        
         drone.attachChild(droneDummy);
         rootNode.attachChild(target);
-        rootNode.attachChild(drone);               
+        rootNode.attachChild(drone);   
+        
+        //Auto
+            Auto = assetManager.loadModel("Models/Auto-modelblend.obj");
+            Auto.setLocalScale(0.3f);
+            Auto.setLocalTranslation(15f,.0f ,-2.5f);
+            
+         
        
         // Licht
         DirectionalLight sun = new DirectionalLight();
@@ -511,6 +541,15 @@ public class Main extends SimpleApplication {
 
     @Override
     public void simpleRender(RenderManager rm) {
+        
+    }
+        public void onAction(String name, boolean isPressed, float tpf) {
+        if(name.equals("Auto erscheint")){
+            
+            
+            
+          
+        } else rootNode.detachChild(Auto);
         
     }
 }
