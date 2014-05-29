@@ -5,7 +5,7 @@ import com.jme3.scene.shape.Box;
 
 /**
  *
- * @author Maniac
+ * @author Christoph Duda
  */
 public class Waypoint {
     float x,z,flughoehe;
@@ -23,8 +23,7 @@ public class Waypoint {
     
     public int getID(){
         return wpID;
-    }
-    
+    }    
     public void setID(int id){
         wpID = id;
     }
